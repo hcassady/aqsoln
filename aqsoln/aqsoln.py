@@ -53,10 +53,10 @@ class Calculator:
       list(zip(x, y)), z
     )
 
-  def molarity_to_weight_percent(self, molarity, temperature=20):
+  def molar_to_weight_percent(self, molarity, temperature=20):
     """Molarity (mol/L) to weight percent.
 
-    Input a molarity (in mol/L) and a temperature, and output the equivilent
+    Input a molarity (in mol/L) and a temperature, and output the
     weight percent.
     """
     molarity_per_mL = molarity / 1000    # mol/mL
@@ -70,3 +70,28 @@ class Calculator:
     initial_guess = molarity_per_mL * self.solute_molar_mass * 100
     weight_percent = fsolve(zero_function, [initial_guess])
     return weight_percent
+
+  def molar_to_mass_fraction(self, molarity, temperature=20):
+    return self.molar_to_weight_percent(molarity, temperature) / 100
+
+  def molar_to_density(self, molarity, temperature=20):
+    """Molar concentration to density.
+
+    Returns the solution density (g /mL) of the solution for a given molarity
+    (mol solute / L solution) and temperature (deg C).
+    """
+    density = self._interpolate(
+      self.molar_to_weight_percent(molarity, temperature), temperature
+    )
+    return density
+  
+  def molar_to_molal(self, molarity, temperature=20):
+    """Molar concentration to molality.
+
+    Returns the molality (mol solute / kg solvent) of the solution for a given
+    molarity (mol solute / L solution) and temperature (deg C).
+    """
+    w = molar_to_mass_fraction(molarity, temperature)
+    Mw = self.solute_molar_mass / 1000  # kg/mol
+    molality = w / ((1 - w) *  Mw)      # mol solute / kg solvent
+    return molality
