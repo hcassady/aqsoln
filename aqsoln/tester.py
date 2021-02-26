@@ -4,23 +4,30 @@ from importlib import reload
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-
+import plotly.graph_objects as go
 
 # %%
 # Generate NaCl tester
-NaCl_test = aq.Solution("NaCl")
-# %%
-fig = plt.figure()
-x_plot = np.linspace(0, 26, 6969)
-def add_temp_to_plot(T):
-  Ts = np.full(len(x_plot), T)
-  y_plot = NaCl_test._interpolate(x_plot, Ts)
-  plt.plot(x_plot, y_plot, '-')
-add_temp_to_plot(22)
-add_temp_to_plot(30)
-add_temp_to_plot(40)
-add_temp_to_plot(50)
-fig.show()
-# plt.plot(x, y, 'o', color='bo', markersize=1);
 
+# %%
+reload(aq)
+NaCl_test = aq.Solution("NaCl")
+
+# Test the interpolator by plotting:
+x_reg = np.linspace(0, 26, 420)
+y_reg = np.linspace(0, 100, 420)
+X_reg, Y_reg = np.meshgrid(x_reg, y_reg)
+Z_reg = NaCl_test._interpolate(X_reg, Y_reg)
+
+fig = go.Figure(data=[
+  go.Surface(x=X_reg, y=Y_reg, z=Z_reg),
+  go.Scatter3d(
+    x = NaCl_test.raw_data.weight_percent,
+    y = NaCl_test.raw_data.temperature,
+    z = NaCl_test.raw_data.density,
+    mode='markers',
+    marker=dict(size=2, color='red')
+    )
+  ])
+fig.show()
 # %%

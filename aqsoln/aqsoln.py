@@ -9,10 +9,6 @@ import molmass
 
 
 
-
-
-
-
 class Solution:
 
   def __init__(self, salt, check_bounds=True):
