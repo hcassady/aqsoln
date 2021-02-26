@@ -1,15 +1,15 @@
-
-
 import numpy as np
 import pandas as pd
 import scipy as sp
-import scipy.interpolate
+from scipy.interpolate import LinearNDInterpolator
+from scipy.optimize import fsolve
+import scipy.optimize
 import sqlite3
 import molmass
 
 
 
-class Solution:
+class Calculator:
 
   def __init__(self, salt, check_bounds=True):
     self.salt = salt
@@ -49,17 +49,24 @@ class Solution:
     x = self.raw_data.weight_percent.to_numpy()
     y = self.raw_data.temperature.to_numpy()
     z = self.raw_data.density.to_numpy()
-    self._interpolate = sp.interpolate.LinearNDInterpolator(
+    self._interpolate = LinearNDInterpolator(
       list(zip(x, y)), z
     )
 
-  # def molar_TO_mass_concentration(self, molarity):
-  #   mass_concentration = molarity * self.solute_molar_mass
-  #   return mass_concentration
+  def molarity_to_weight_percent(self, molarity, temperature=20):
+    """Molarity (mol/L) to weight percent.
 
-  # # def molar_TO_mass_fraction(self, molarity):
-
-  # def solve_density_function(self, function, temperature):
-  #   x_ref = self.raw_data.weight_percent
-  #   y_ref = self._interpolate(x_ref, temperature)
-
+    Input a molarity (in mol/L) and a temperature, and output the equivilent
+    weight percent.
+    """
+    molarity_per_mL = molarity / 1000    # mol/mL
+    def zero_function(weight_percent):
+      zero = (
+        ((molarity_per_mL * self.solute_molar_mass) /
+          self._interpolate(weight_percent, temperature)) - weight_percent / 100
+      )
+      return zero
+    # Initial guess based on density of 1 g/mL
+    initial_guess = molarity_per_mL * self.solute_molar_mass * 100
+    weight_percent = fsolve(zero_function, [initial_guess])
+    return weight_percent

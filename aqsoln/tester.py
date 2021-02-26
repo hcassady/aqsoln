@@ -7,12 +7,9 @@ import pandas as pd
 import plotly.graph_objects as go
 
 # %%
-# Generate NaCl tester
-
-# %%
 reload(aq)
-NaCl_test = aq.Solution("NaCl")
-
+NaCl_test = aq.Calculator("NaCl")
+# %%
 # Test the interpolator by plotting:
 x_reg = np.linspace(0, 26, 420)
 y_reg = np.linspace(0, 100, 420)
@@ -29,5 +26,15 @@ fig = go.Figure(data=[
     marker=dict(size=2, color='red')
     )
   ])
+fig.update_layout(scene = dict(
+    xaxis_title="Weight Percent",
+    yaxis_title="Temperature",
+    zaxis_title="Density"
+))
 fig.show()
+# %%
+# Generate some values:
+print(NaCl_test.molarity_to_weight_percent(0.1, 15))
+print(NaCl_test.molarity_to_weight_percent(3.1, 15))
+print(NaCl_test.molarity_to_weight_percent(np.array([0.1, 3.1]), 15))
 # %%
