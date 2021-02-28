@@ -51,7 +51,7 @@ class Calculator:
     z = self.raw_data.density.to_numpy()
     self._interpolate = LinearNDInterpolator(
       list(zip(x, y)), z
-    )
+      )
 
   def molar_to_weight_percent(self, molarity, temperature=20):
     """Molarity (mol/L) to weight percent.
