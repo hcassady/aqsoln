@@ -34,7 +34,11 @@ fig.update_layout(scene = dict(
 fig.show()
 # %%
 # Generate some values:
-print(NaCl_test.molarity_to_weight_percent(0.1, 15))
-print(NaCl_test.molarity_to_weight_percent(3.1, 15))
-print(NaCl_test.molarity_to_weight_percent(np.array([0.1, 3.1]), 15))
+print("1.2 M to m at default temp:\n")
+result = NaCl_test(1.2, 'M', 'm')
+print(result)
+
+print("\nDensity of 2.6 molal solution at 37 °C\n")
+result = NaCl_test(2.6, 37, 'molal', 'rho')
+print(result)
 # %%
