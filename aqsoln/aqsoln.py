@@ -169,7 +169,7 @@ class Calculator:
     given molarity (mol solute / L solution) and temperature (deg C).
     """
     return self.weight_percent_to_mole_fraction(
-      self.molar_to_weight_percent(molarity, temperature), temperature
+      self.molar_to_weight_percent(molarity, temperature)
     )
 
   # ---------------------------------
