@@ -49,6 +49,9 @@ class Calculator:
       list(zip(x, y)), z
     )
 
+  # ---------------------------------
+  # Weight percent section
+
   def weight_percent_to_density(self, weight_percent, temperature=20):
     """Weight percent to molality.
 
@@ -57,7 +60,7 @@ class Calculator:
     """
     return self.interpolate(weight_percent, temperature)
 
-  def weight_percent_to_mass_fraction(self, weight_percent, temperature=False):
+  def weight_percent_to_mass_fraction(self, weight_percent, temperature=None):
     """Weight percent to mass fraction. (Temperature not required)
 
     Returns the mass fraction (g solute / g solution) of the solution for a
@@ -92,7 +95,7 @@ class Calculator:
     molality = w / ((1 - w) * Mw)      # mol solute / kg solvent
     return molality
 
-  def weight_percent_to_mole_fraction(self, weight_percent, temperature=20):
+  def weight_percent_to_mole_fraction(self, weight_percent, temperature=None):
     """Weight percent to mole fraction.
 
     Returns the mole fraction (mol solute / mol total) of the solution for a
@@ -107,6 +110,9 @@ class Calculator:
     M_bar = ((w / Mw) + ((1-w) / M_aq))**-1    # Average molar mass,   g/mol
     x = (w * M_bar) / Mw                       # Mole fraction
     return x
+
+  # ---------------------------------
+  # Molar section
 
   def molar_to_weight_percent(self, molarity, temperature=20):
     """Molarity to weight percent.
@@ -166,7 +172,10 @@ class Calculator:
       self.molar_to_weight_percent(molarity, temperature), temperature
     )
 
-  def molal_to_weight_percent(self, molality, temperature=False):
+  # ---------------------------------
+  # Molal section
+
+  def molal_to_weight_percent(self, molality, temperature=None):
     """Molal concentration to weight percent.
 
     Returns weight percent of the solution for a given molality (mol solute / kg
@@ -180,13 +189,16 @@ class Calculator:
     w = (1 + 1 / (b * Mw))**-1
     return w
 
-  def molal_to_mass_fraction(self, molality, temperature=20):
+  def molal_to_mass_fraction(self, molality, temperature=None):
     """Molal concentration to mass fraction.
 
     Returns mass fraction of the solution for a given molality (mol solute / kg
-    solvent) and temperature (deg C).
+    solvent).
+
+    The temperature is not required, but is included as an allowed argument to
+    allow the argument to be passed to (and ignored by) the function).
     """
-    return self.molal_to_weight_percent(molality, temperature) / 100
+    return self.molal_to_weight_percent(molality) / 100
 
   def molal_to_density(self, molality, temperature=20):
     """Molal concentration to density.
@@ -195,7 +207,7 @@ class Calculator:
     molality (mol solute / kg solvent) and temperature (deg C).
     """
     return self.weight_percent_to_density(
-      self.molal_to_weight_percent(molality, temperature), temperature
+      self.molal_to_weight_percent(molality), temperature
     )
 
   def molal_to_molar(self, molality, temperature=20):
@@ -205,10 +217,10 @@ class Calculator:
     molality (mol solute / kg solvent) and temperature (deg C).
     """
     return self.weight_percent_to_molar(
-      self.molal_to_weight_percent(molality, temperature), temperature
+      self.molal_to_weight_percent(molality), temperature
     )
 
-  def molal_to_mole_fraction(self, molarity, temperature=False):
+  def molal_to_mole_fraction(self, molarity, temperature=None):
     """Molal concentration to mole fraction.
 
     Returns the mole fraction (mol solute / mol total) of the solution for a
@@ -218,5 +230,5 @@ class Calculator:
     allow the argument to be passed to (and ignored by) the function).
     """
     return self.weight_percent_to_mole_fraction(
-      self.molal_to_weight_percent(molarity, temperature), temperature
+      self.molal_to_weight_percent(molarity)
     )
