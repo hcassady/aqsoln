@@ -1,12 +1,8 @@
-import numpy as np
 import pandas as pd
-import scipy as sp
 from scipy.interpolate import LinearNDInterpolator
 from scipy.optimize import fsolve
-import scipy.optimize
 import sqlite3
 import molmass
-
 
 
 class Calculator:
@@ -14,12 +10,12 @@ class Calculator:
   def __init__(self, salt, check_bounds=True):
     self.salt = salt
     self.solute_molar_mass = molmass.Formula(salt).mass
+    self.solvent_molar_mass = molmass.Formula('H2O').mass
     self._load_data()
     self._initialize_interpolator()
 
-
   def _load_data(self):
-    query = f"""
+    query = """
       --begin-sql
       SELECT
         weight_percent,  -- (g solute / g total) x 100%
@@ -51,19 +47,80 @@ class Calculator:
     z = self.raw_data.density.to_numpy()
     self._interpolate = LinearNDInterpolator(
       list(zip(x, y)), z
-      )
+    )
+
+  def weight_percent_to_density(self, weight_percent, temperature=20):
+    """Weight percent to molality.
+
+    Returns the density (g solution / mL solution) of the solution for a given
+    weight percent (g solute / g solution x 100%) and temperature (deg C).
+    """
+    return self.interpolate(weight_percent, temperature)
+
+  def weight_percent_to_mass_fraction(self, weight_percent, temperature=False):
+    """Weight percent to mass fraction. (Temperature not required)
+
+    Returns the mass fraction (g solute / g solution) of the solution for a
+    given weight percent (g solute / g solution x 100%).
+
+    The temperature is not required, but is included as an allowed argument to
+    allow the argument to be passed to (and ignored by) the function).
+    """
+    return weight_percent / 100
+
+  def weight_percent_to_molar(self, weight_percent, temperature=20):
+    """Weight percent to molality.
+
+    Returns the molality (mol solute / kg solvent) of the solution for a given
+    weight percent (g solute / g solution) and temperature (deg C).
+    """
+    w = self.weight_percent_to_mass_fraction(weight_percent, temperature)
+    rho = self.weight_percent_to_density(weight_percent, temperature)   # g/mL
+    Mw = self.solute_molar_mass                                         # g/mol
+    molar_concentration = ((w * rho) / Mw)                              # mol/mL
+    molar_concentration = molar_concentration * 1000                    # mol/L
+    return molar_concentration
+
+  def weight_percent_to_molal(self, weight_percent, temperature=20):
+    """Weight percent to molality.
+
+    Returns the molality (mol solute / kg solvent) of the solution for a given
+    weight percent (g solute / g solution x 100%) and temperature (deg C).
+    """
+    w = self.weight_percent_to_mass_fraction(weight_percent, temperature)
+    Mw = self.solute_molar_mass / 1000  # kg/mol
+    molality = w / ((1 - w) * Mw)      # mol solute / kg solvent
+    return molality
+
+  def weight_percent_to_mole_fraction(self, weight_percent, temperature=20):
+    """Weight percent to mole fraction.
+
+    Returns the mole fraction (mol solute / mol total) of the solution for a
+    given weight percent (g solute / g solution x 100%).
+
+    The temperature is not required, but is included as an allowed argument to
+    allow the argument to be passed to (and ignored by) the function).
+    """
+    w = weight_percent                         # Weight percent of solute
+    Mw = self.solute_molar_mass                # Molar mass of solute, g/mol
+    M_aq = self.solvent_molar_mass             # Molar mass of water,  g/mol
+    M_bar = ((w / Mw) + ((1-w) / M_aq))**-1    # Average molar mass,   g/mol
+    x = (w * M_bar) / Mw                       # Mole fraction
+    return x
 
   def molar_to_weight_percent(self, molarity, temperature=20):
-    """Molarity (mol/L) to weight percent.
+    """Molarity to weight percent.
 
-    Input a molarity (in mol/L) and a temperature, and output the
-    weight percent.
+    Returns the weight percent (g solute / g solution * 100%) of the solution
+    for a given molarity (mol solute / L solution) and temperature (deg C).
     """
     molarity_per_mL = molarity / 1000    # mol/mL
+
     def zero_function(weight_percent):
       zero = (
         ((molarity_per_mL * self.solute_molar_mass) /
-          self._interpolate(weight_percent, temperature)) - weight_percent / 100
+         self.weight_percent_to_density(
+           weight_percent, temperature)) - weight_percent / 100
       )
       return zero
     # Initial guess based on density of 1 g/mL
@@ -72,6 +129,11 @@ class Calculator:
     return weight_percent
 
   def molar_to_mass_fraction(self, molarity, temperature=20):
+    """Molar concentration to mass fraction.
+
+    Returns the mass fraction (g solute / g solvent) of the solution for a given
+    molarity (mol solute / L solution) and temperature (deg C).
+    """
     return self.molar_to_weight_percent(molarity, temperature) / 100
 
   def molar_to_density(self, molarity, temperature=20):
@@ -80,18 +142,81 @@ class Calculator:
     Returns the solution density (g /mL) of the solution for a given molarity
     (mol solute / L solution) and temperature (deg C).
     """
-    density = self._interpolate(
+    return self.weight_percent_to_density(
       self.molar_to_weight_percent(molarity, temperature), temperature
     )
-    return density
-  
+
   def molar_to_molal(self, molarity, temperature=20):
     """Molar concentration to molality.
 
     Returns the molality (mol solute / kg solvent) of the solution for a given
     molarity (mol solute / L solution) and temperature (deg C).
     """
-    w = molar_to_mass_fraction(molarity, temperature)
-    Mw = self.solute_molar_mass / 1000  # kg/mol
-    molality = w / ((1 - w) *  Mw)      # mol solute / kg solvent
-    return molality
+    return self.weight_percent_to_molal(
+      self.molar_to_weight_percent(molarity, temperature), temperature
+    )
+
+  def molar_to_mole_fraction(self, molarity, temperature=20):
+    """Molar concentration to mole fraction.
+
+    Returns the mole fraction (mol solute / mol total) of the solution for a
+    given molarity (mol solute / L solution) and temperature (deg C).
+    """
+    return self.weight_percent_to_mole_fraction(
+      self.molar_to_weight_percent(molarity, temperature), temperature
+    )
+
+  def molal_to_weight_percent(self, molality, temperature=False):
+    """Molal concentration to weight percent.
+
+    Returns weight percent of the solution for a given molality (mol solute / kg
+    solvent).
+
+    The temperature is not required, but is included as an allowed argument to
+    allow the argument to be passed to (and ignored by) the function).
+    """
+    b = molality                          # mol solute / kg solution
+    Mw = self.solute_molar_mass / 1000    # kg solute / mol solute
+    w = (1 + 1 / (b * Mw))**-1
+    return w
+
+  def molal_to_mass_fraction(self, molality, temperature=20):
+    """Molal concentration to mass fraction.
+
+    Returns mass fraction of the solution for a given molality (mol solute / kg
+    solvent) and temperature (deg C).
+    """
+    return self.molal_to_weight_percent(molality, temperature) / 100
+
+  def molal_to_density(self, molality, temperature=20):
+    """Molal concentration to density.
+
+    Returns density (g solution / mL solution) of the solution for a given
+    molality (mol solute / kg solvent) and temperature (deg C).
+    """
+    return self.weight_percent_to_density(
+      self.molal_to_weight_percent(molality, temperature), temperature
+    )
+
+  def molal_to_molar(self, molality, temperature=20):
+    """Molal concentration to molar concentration.
+
+    Returns molarity (mol solute / L solution) of the solution for a given
+    molality (mol solute / kg solvent) and temperature (deg C).
+    """
+    return self.weight_percent_to_molar(
+      self.molal_to_weight_percent(molality, temperature), temperature
+    )
+
+  def molal_to_mole_fraction(self, molarity, temperature=False):
+    """Molal concentration to mole fraction.
+
+    Returns the mole fraction (mol solute / mol total) of the solution for a
+    given molality (mol solute / kg solvent) and temperature (deg C).
+
+    The temperature is not required, but is included as an allowed argument to
+    allow the argument to be passed to (and ignored by) the function).
+    """
+    return self.weight_percent_to_mole_fraction(
+      self.molal_to_weight_percent(molarity, temperature), temperature
+    )
